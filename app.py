@@ -1,53 +1,72 @@
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend to avoid rendering issues
+matplotlib.use('Agg')  # Backend não-interativo
 
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Compute 3d6 probability distribution
+# Função para calcular distribuição do 3d6
 def get_3d6_distribution():
     """
-    Calculates the probability distribution of sums from rolling 3 six-sided dice (3d6).
-    Returns probabilities for sums from 3 to 18.
+    Aqui eu calculo a distribuição de probabilidade para a soma de 3 dados de 6 lados.
     """
-    outcomes = 6 ** 3  # Total possible outcomes = 216
-    counts = np.zeros(19)  # Index 0-18, only sums 3-18 are valid
+    outcomes = 6 ** 3
+    counts = np.zeros(19)
     for d1 in range(1, 7):
         for d2 in range(1, 7):
             for d3 in range(1, 7):
                 counts[d1 + d2 + d3] += 1
     probabilities = counts / outcomes
-    return probabilities[3:]  # Return probabilities for sums 3 to 18
+    return probabilities[3:]
 
-# Streamlit app title
-st.title("Distribuição de soma de 3d6")
+# Título
+st.title("Distribuição da Soma de 3d6")
 
-# Get probability distribution and corresponding sums
+# Distribuição e somas
 prob_dist = get_3d6_distribution()
-sums = np.arange(3, 19)  # Valid sums: 3 to 18
+sums = np.arange(3, 19)
 
-# User input: current value threshold
+# Input do usuário
 current_value = st.number_input(
-    "Insert current value (3-18):", min_value=3, max_value=18, value=10, step=1
+    "Insira o valor atual (3-18):", min_value=3, max_value=18, value=10, step=1
 )
 
-# Calculate probability of rolling above the current value
+# Probabilidades
 chance_above = np.sum(prob_dist[sums > current_value])
+chance_below = np.sum(prob_dist[sums <= current_value])
 
-# Display chance
-st.write(f"Chance de ser **acima** da soma {current_value}: {chance_above:.4f} ({chance_above*100:.2f}%)")
+# Exibição
+st.write(f"Chance da soma ser **acima** de {current_value}: {chance_above:.4f} ({chance_above*100:.2f}%)")
+st.write(f"Chance da soma ser **igual ou abaixo** de {current_value}: {chance_below:.4f} ({chance_below*100:.2f}%)")
 
-# Plotting with matplotlib
+# Plotagem
 fig, ax = plt.subplots(figsize=(8, 4))
-
-# Red bars for distribution
-ax.bar(sums, prob_dist, color='red', edgecolor='black')
-
-# Light grey background
 ax.set_facecolor('#f0f0f0')
 
-# Dashed vertical line at current value
+mask_red = sums <= current_value
+mask_blue = sums > current_value
+
+# Barras vermelhas
+ax.bar(
+    sums[mask_red],
+    prob_dist[mask_red],
+    color='red',
+    alpha=0.6,
+    edgecolor='black',
+    label='≤ Limite'
+)
+
+# Barras azuis
+ax.bar(
+    sums[mask_blue],
+    prob_dist[mask_blue],
+    color='blue',
+    alpha=0.6,
+    edgecolor='black',
+    label='> Limite'
+)
+
+# Linha tracejada
 ax.axvline(
     current_value,
     color='black',
@@ -56,19 +75,46 @@ ax.axvline(
     label=f'Limite = {current_value}'
 )
 
-# Labels and title
-ax.set_xlabel("Soma do 3d6")
-ax.set_ylabel("Probabilidade")
-ax.set_title("Distribuição de Probabilidade de Soma de 3d6")
+# Bubble para a % abaixo
+ax.text(
+    current_value - 2,
+    max(prob_dist) * 0.9,
+    f"{chance_below*100:.1f}%",
+    color='white',
+    ha='right',
+    fontsize=10,
+    weight='bold',
+    bbox=dict(
+        boxstyle='round,pad=0.3',
+        facecolor='red',
+        alpha=0.6,
+        edgecolor='black'
+    )
+)
 
-# Show legend
+# Bubble para a % acima
+ax.text(
+    current_value + 2,
+    max(prob_dist) * 0.9,
+    f"{chance_above*100:.1f}%",
+    color='white',
+    ha='left',
+    fontsize=10,
+    weight='bold',
+    bbox=dict(
+        boxstyle='round,pad=0.3',
+        facecolor='blue',
+        alpha=0.6,
+        edgecolor='black'
+    )
+)
+
+# Rótulos e título
+ax.set_xlabel("Soma de 3d6")
+ax.set_ylabel("Probabilidade")
+ax.set_title("Distribuição de Probabilidade do 3d6")
 ax.legend()
 
-# Improve layout
 plt.tight_layout()
-
-# Render plot in Streamlit
 st.pyplot(fig)
-
-# Close figure to prevent memory issues
 plt.close(fig)
